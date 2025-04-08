@@ -1,0 +1,62 @@
+[
+    {
+        "title": "Clean Codeweq0987249806792085376098256",
+        "author": "Robert C. Martin",
+        "year": 2008,
+        "status": "lent out"
+    },
+    {
+        "title": "Code Complete",
+        "author": "Steve McConnell",
+        "year": 1993,
+        "status": "available"
+    },
+    {
+        "title": "Design Patterns: Elements of Reusable Object-Oriented Software",
+        "author": "Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides",
+        "year": 1994,
+        "status": "missing"
+    },
+    {
+        "title": "Introduction to the Theory of Computation",
+        "author": "Michael Sipser",
+        "year": 1996,
+        "status": "missing"
+    },
+    {
+        "title": "Python Crash Course",
+        "author": "Eric Matthes",
+        "year": 2015,
+        "status": "available"
+    },
+    {
+        "title": "Refactoring: Improving the Design of Existing Code",
+        "author": "Martin Fowler",
+        "year": 1999,
+        "status": "missing"
+    },
+    {
+        "title": "Structure and Interpretation of Computer Programs",
+        "author": "Harold Abelson, Gerald Jay Sussman",
+        "year": 1985,
+        "status": "lent out"
+    },
+    {
+        "title": "The Mythical Man-Month",
+        "author": "Frederick P. Brooks Jr.",
+        "year": 1975,
+        "status": "lent out"
+    },
+    {
+        "title": "The Pragmatic Programmer",
+        "author": "Andrew Hunt, David Thomas",
+        "year": 1999,
+        "status": "missing"
+    },
+    {
+        "title": "You Don't Know JS",
+        "author": "Kyle Simpson",
+        "year": 2014,
+        "status": "available"
+    }
+]
