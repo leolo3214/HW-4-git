@@ -1,141 +1,179 @@
-import os
+# controller.py
+
+import threading
+import random
+import string
+import time
+import tkinter.filedialog
 import json
-from PIL import Image, ImageTk
-import pyocr
-import pyocr.builders
-import tkinter as tk
+class LibController:
+    def __init__(self, model, view):
+        self.model = model
+        self.view = view
+        self.view.set_controller(self)
+        self.update_view()
 
+    def update_view(self, book_list=None):
+        books_to_display = book_list if book_list is not None else self.model.books
+        self.view.fill_list(books_to_display)
 
-class ImageDrawer:
-    def __init__(self, root, image_path):
-        self.root = root
-        self.image_path = image_path
-        self.canvas = tk.Canvas(root, width=500, height=500)
-        self.canvas.pack()
-
-        # Load the image
-        self.image = Image.open(image_path)
-        self.image_tk = ImageTk.PhotoImage(self.image)
-        
-        # Display the image on the canvas
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image_tk)
-
-        # Variables to track mouse position and rectangle drawing
-        self.start_x = None
-        self.start_y = None
-        self.rect = None
-        self.rect_id = None
-        self.label = tk.Label(root, text="Dimensions: Width x Height", font=("Helvetica", 12))
-        self.label.pack(pady=10)
-        self.text_label = tk.Label(root, text="Recognized Text: ", font=("Helvetica", 12))
-        self.text_label.pack(pady=10)
-
-        # Set up OCR tool (pyocr)
-        tools = pyocr.get_available_tools()
-        if len(tools) == 0:
-            raise Exception("No OCR tool found")
-        self.tool = tools[0]  # Using the first available OCR tool (usually Tesseract)
-
-        # Bind mouse events
-        self.canvas.bind("<ButtonPress-1>", self.on_button_press)
-        self.canvas.bind("<B1-Motion>", self.on_mouse_drag)
-        self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
-
-    def on_button_press(self, event):
-        # When a new rectangle starts, delete the previous one
-        if self.rect_id:
-            self.canvas.delete(self.rect_id)
-        
-        # Store the initial position when the mouse button is pressed
-        self.start_x = event.x
-        self.start_y = event.y
-
-        # Create a new placeholder rectangle (empty)
-        self.rect = self.canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline="red", width=2)
-        self.rect_id = self.rect  # Store the ID of the current rectangle
-
-    def on_mouse_drag(self, event):
-        # Update the rectangle's dimensions as the mouse moves
-        self.canvas.coords(self.rect, self.start_x, self.start_y, event.x, event.y)
-        
-        # Calculate width and height of the rectangle
-        width = abs(event.x - self.start_x)
-        height = abs(event.y - self.start_y)
-        
-        # Update label with the current width and height
-        self.label.config(text=f"Dimensions: {width} x {height}")
-
-    def on_button_release(self, event):
-        # Finalize the rectangle position after the mouse button is released
-        self.canvas.coords(self.rect, self.start_x, self.start_y, event.x, event.y)
-
-        # Final width and height
-        width = abs(event.x - self.start_x)
-        height = abs(event.y - self.start_y)
-        
-        # Update label with the final dimensions
-        self.label.config(text=f"Dimensions: {width} x {height}")
-
-        # Perform OCR on the selected area
-        self.recognize_text_in_rectangle(self.start_x, self.start_y, event.x, event.y)
-
-    def recognize_text_in_rectangle(self, x1, y1, x2, y2):
-        # Crop the image based on the selected area
-        cropped_image = self.image.crop((x1, y1, x2, y2))
-
-        # Convert the cropped image to text using pyocr
-        recognized_text = self.tool.image_to_string(cropped_image, lang='eng', builder=pyocr.builders.TextBuilder())
-
-        # Display the recognized text in the label
-        self.text_label.config(text=f"Recognized Text: {recognized_text.strip()}")
-
-
-
-def load_library(library_name):
-    if not os.path.exists(library_name):
-        print("File not found, starting with an empty list...")
-        return []
-    try:
-        with open(library_name, "r") as fh:
-            data = json.load(fh)
-            if isinstance(data, list):
-                return data
+    def add_book_controller(self):
+        new_book = self.view.show_add_book_dialog()
+        if new_book:
+            if new_book["title"]:
+                self.model.add_book(new_book)
+                self.update_view()
             else:
-                print("Invalid JSON format! Library must be a list.")
-                return 1
-    except (json.JSONDecodeError, ValueError) as e:
-        print("Error reading JSON:", e)
-        return 2
+                self.view.show_error("Add Error", "Title is required.")
+        else:
+            # User cancelled the dialog.
+            pass
 
+    def generate_random_book(self):
+        title_words = []
+        for _ in range(random.randint(1, 4)):
+            word = ''.join(random.choices(string.ascii_lowercase, k=random.randint(3, 8)))
+            title_words.append(word)
+        title = ' '.join(title_words).title()
 
-def c_save_library(library_name, data):
-    with open(library_name, "w") as fh:
-        json.dump(data, fh, indent=4)
+        author_first_name = ''.join(random.choices(string.ascii_uppercase, k=1)) + ''.join(random.choices(string.ascii_lowercase, k=random.randint(3, 8)))
+        author_last_name = ''.join(random.choices(string.ascii_uppercase, k=1)) + ''.join(random.choices(string.ascii_lowercase, k=random.randint(5, 12)))
+        author = f"{author_first_name} {author_last_name}"
 
+        year = random.randint(1900, 2024)
+        status = random.choice(["available", "borrowed", "maintenance", "lost", "on hold"])
 
-def c_newfile(filename):
-    #Create a new empty JSON file.
-    try:
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump([], f, indent=4)  # Write an empty JSON list
-        print(f"New file created: {filename}")
-    except Exception as e:
-        print(f"Error creating file: {e}")
+        return {"title": title, "author": author, "year": year, "status": status}
 
+    def generate_books_threaded(self, num_books):
+        generated_books = []
+        for i in range(num_books):
+            if self.cancel_generation_flag:
+                break
+            # Generate random strings for title and author.
+            title = ''.join(random.choices(string.ascii_letters, k=10))
+            author = ''.join(random.choices(string.ascii_letters, k=8))
+            year = random.randint(1900, 2025)
+            status = random.choice(["available", "lent out", "missing", "deleted"])
+            book = {"title": title, "author": author, "year": year, "status": status}
+            generated_books.append(book)
+        # Append generated books to existing library.
+        self.model.books.extend(generated_books)
+        self.model.save_library()
+        self.update_view()
+        if self.cancel_generation_flag:
+            self.view.show_info("Generation Cancelled", f"Generation cancelled after {len(generated_books)} books.")
+        else:
+            self.view.show_info("Generation Complete", f"Successfully generated {len(generated_books)} books.")
 
-def c_openfile(library_name):
-    #Open a JSON file and return the loaded data.
-    if not os.path.exists(library_name):
-        print("Error: File not found.")
-        return None
+    def cancel_generation(self):
+        self.cancel_generation_flag = True
 
-    try:
-        with open(library_name, "r", encoding="utf-8") as f:
-            content = f.read().strip()  # Read and strip any empty spaces
-            return json.loads(content) if content else []  # Handle empty files gracefully
-    except json.JSONDecodeError:
-        print("Error: Invalid JSON format.")
-        return None
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return None
+        
+    def start_generate_books_controller(self, num_books):
+        self.view.show_info("Generation Started", "Generating books in the background...\nThe list will update when complete.")
+        # Reset cancel flag before starting generation.
+        self.cancel_generation_flag = False
+        thread = threading.Thread(target=self.generate_books_threaded, args=(num_books,), daemon=True)
+        thread.start()
+
+    def search_book_controller(self):
+        criteria = self.view.show_search_dialog()
+        if criteria is not None:
+            results = self.model.search_book(criteria)
+            self.update_view(book_list=results)
+    def delete_book_controller(self):
+        selected_view_index = self.view.get_selected_index()
+        if selected_view_index is not None:
+            try:
+                display_string = self.view.book_listbox.get(selected_view_index)
+                title_to_delete = display_string.split('|')[0].strip()
+                model_index_to_delete = -1
+                for i, book in enumerate(self.model.books):
+                    if book.get('title', '') == title_to_delete:
+                        model_index_to_delete = i
+                        break
+                if model_index_to_delete != -1:
+                    if self.view.ask_yes_no("Confirm Delete", f"Are you sure you want to delete '{title_to_delete}'?"):
+                        if self.model.delete_book(model_index_to_delete):
+                            self.update_view()
+                        else:
+                            self.view.show_error("Delete Error", "Model failed to delete the book.")
+                else:
+                    self.view.show_error("Delete Error", "Could not find the selected book in the main library data. The list might have changed. Please try again.")
+            except Exception as e:
+                self.view.show_error("Delete Error", f"An error occurred during deletion: {e}")
+        else:
+            self.view.show_error("Delete Error", "Please select a book from the list to delete.")
+
+    def change_status_controller(self):
+        selected_view_index = self.view.get_selected_index()
+        if selected_view_index is not None:
+            try:
+                display_string = self.view.book_listbox.get(selected_view_index)
+                title_to_change = display_string.split('|')[0].strip()
+                model_index_to_change = -1
+                for i, book in enumerate(self.model.books):
+                    if book.get('title', '') == title_to_change:
+                        model_index_to_change = i
+                        break
+                if model_index_to_change != -1:
+                    new_status = self.view.ask_status(title_to_change)
+                    if new_status is not None:
+                        self.model.change_status(model_index_to_change, new_status)
+                        self.update_view()
+                else:
+                    self.view.show_error("Change Status Error", "Could not find the selected book in the main library data. The list might have changed. Please try again.")
+            except Exception as e:
+                self.view.show_error("Change Status Error", f"An error occurred during status change: {e}")
+        else:
+            self.view.show_error("Change Status Error", "Please select a book from the list to change the status.")
+    def sort_library_by_title(self):
+        self.model.sort_library_by_title()
+        self.update_view()
+
+    def sort_library_by_year(self):
+        self.model.sort_library_by_year()
+        self.update_view()
+
+    def sort_library_by_author(self):
+        self.model.sort_library_by_author()
+        self.update_view()
+
+    def sort_library_by_status(self):
+        self.model.sort_library_by_status()
+        self.update_view()
+
+    def open_library_file(self):
+        file_path = tkinter.filedialog.askopenfilename(
+            title="Open Library File",
+            filetypes=[("JSON Files", "*.json")]
+        )
+        if file_path:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                # Update the model's books with the new data.
+                self.model.set_books(data)
+                # Change the model's storage_file to the new file so that save_library writes here.
+                self.model.storage_file = file_path
+                # Refresh the main window with the new data.
+                self.view.fill_list(data)
+            except Exception as e:
+                self.view.show_error("Error", f"Failed to load JSON file:\n{str(e)}")
+
+    def new_library_controller(self):
+        file_path = tkinter.filedialog.asksaveasfilename(
+            title="Create New Library File",
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json")])
+        # Use "lib_default.json" if no file is chosen.
+        if not file_path:
+            file_path = "lib_default.json"
+        # Initialize an empty library
+        self.model.set_books([])
+        # Update the storage file so that subsequent saves write to the new file.
+        self.model.storage_file = file_path
+        self.model.save_library()
+        self.update_view()
+        self.view.show_info("New Library Created", f"New library created: {file_path}")
