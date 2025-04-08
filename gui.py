@@ -419,6 +419,28 @@ def update_book_count():
     book_count_label.config(text=f"Total Books: {len(library)}")
 
 
+def open_image_window():
+    #app = ImageDrawer(root, image_path)
+
+    imagename = filedialog.askopenfilename(
+        title="PNG file",
+        filetypes=[("PNG Files", "*.png")]
+    )
+
+    random_window = tk.Toplevel(root)
+    random_window.title("search book by image + OCR")
+    random_window.geometry("400x400")
+    random_window.resizable(True, True)
+    tk.Label(random_window, text="search book by image + OCR", font=("Arial", 12)).pack(pady=10)
+
+    if imagename:  # Ensure an image is selected
+        image = controller.ImageDrawer(random_window, imagename)  # Load new library
+
+        if image is None:
+            messagebox.showerror("Error", "Failed to load the selected file.")
+            return
+        
+
 def create_gui():
     global root, title_entry, author_entry, year_entry, book_list, sort_order,library, library_name, book_count_label
     root = tk.Tk()
@@ -456,9 +478,9 @@ def create_gui():
     tk.Button(frame, text="Add Book", command=open_add_book_window, width=20).grid(row=3, column=0, pady=5)
     tk.Button(frame, text="Search Book", command=search_book, width=20).grid(row=3, column=1, pady=5)
     tk.Button(frame, text="Show all Books", command=show_all_books, width=20).grid(row=3, column=2, pady=5)
-    tk.Button(root, text="Delete Book", command=open_delete_confirmation, width=20, bg="red", fg="white").pack(pady=5)
-    tk.Button(root, text="Add Random Books", command=open_random_books_window, width=20, bg="blue", fg="white").pack(pady=5)
-
+    tk.Button(frame, text="Delete Book", command=open_delete_confirmation, width=20,  bg="red", fg="white").grid(row=4, column=0, pady=5)
+    tk.Button(frame, text="Add Random Books", command=open_random_books_window, width=20, bg="blue", fg="white").grid(row=4, column=1, pady=5)
+    tk.Button(frame, text="Upload Image", command=open_image_window, width=20, bg="green", fg="white").grid(row=4, column=2, pady=5)
 
     # Frame for book list and scrollbar
     book_frame = tk.Frame(root)
