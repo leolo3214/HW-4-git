@@ -8,6 +8,7 @@ import tkinter as tk
 
 class ImageDrawer:
     def __init__(self, root, image_path):
+        self.recognized_text = None  # Initialize recognized_text to None
         self.root = root
         self.image_path = image_path
         self.canvas = tk.Canvas(root, width=500, height=500)
@@ -80,14 +81,38 @@ class ImageDrawer:
         self.recognize_text_in_rectangle(self.start_x, self.start_y, event.x, event.y)
 
     def recognize_text_in_rectangle(self, x1, y1, x2, y2):
+        global recognized_text
+
+        x1, x2 = min(x1, x2), max(x1, x2)
+        y1, y2 = min(y1, y2), max(y1, y2)
+
         # Crop the image based on the selected area
         cropped_image = self.image.crop((x1, y1, x2, y2))
 
         # Convert the cropped image to text using pyocr
         recognized_text = self.tool.image_to_string(cropped_image, lang='eng', builder=pyocr.builders.TextBuilder())
+        self.recognized_text = recognized_text.strip()  # Store the recognized text
 
         # Display the recognized text in the label
         self.text_label.config(text=f"Recognized Text: {recognized_text.strip()}")
+        #print(f"Recognized Text: {recognized_text.strip()}")
+
+        confirm_window = tk.Toplevel(self.root)
+        confirm_window.title("Confirm Text")
+        confirm_window.geometry("300x150")
+        confirm_window.resizable(False, False)
+
+        tk.Label(confirm_window, text=f"Do you want to search for a book with this name in your library?:\n'{recognized_text.strip()}'?", fg="red").pack(pady=10)
+        tk.Button(confirm_window, text="Yes", command=lambda: self.save_text(recognized_text.strip(), confirm_window)).pack(side=tk.LEFT, padx=20)
+        tk.Button(confirm_window, text="No, select new text", command=confirm_window.destroy).pack(side=tk.RIGHT, padx=20)
+
+    def save_text(self, recognized_text, confirm_window):
+        #root.title_entry.insert(0, recognized_text)  # Insert the recognized text into the title entry field
+        self.recognized_text = recognized_text  # Store the recognized text
+        confirm_window.destroy()  # Close the confirmation window
+    
+    def return_recognized_text(self):
+        return self.recognized_text
 
 
 

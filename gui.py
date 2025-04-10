@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from tkinter import filedialog
 import controller
+from controller import ImageDrawer
 import random
 import threading
 from tkinter import ttk
@@ -427,18 +428,64 @@ def open_image_window():
         filetypes=[("PNG Files", "*.png")]
     )
 
-    random_window = tk.Toplevel(root)
-    random_window.title("search book by image + OCR")
-    random_window.geometry("400x400")
-    random_window.resizable(True, True)
-    tk.Label(random_window, text="search book by image + OCR", font=("Arial", 12)).pack(pady=10)
+    image_window = tk.Toplevel(root)
+    image_window.title("search book by image + OCR")
+    image_window.geometry("400x400")
+    image_window.resizable(True, True)
+    tk.Label(image_window, text="search book by image + OCR", font=("Arial", 12)).pack(pady=10)
+    #tk.Button(image_window, text="Get Recognized Text", command=lambda: image.return_recognized_text(), width=20).pack(pady=10)
+    
 
     if imagename:  # Ensure an image is selected
-        image = controller.ImageDrawer(random_window, imagename)  # Load new library
+        image = controller.ImageDrawer(image_window, imagename)  # Load image
 
         if image is None:
             messagebox.showerror("Error", "Failed to load the selected file.")
             return
+        #print(image.return_recognized_text())
+        #recognized_text = image.return_recognized_text()
+    #random_window.text_label.config(text=f"Recognized Text: {recognized_text.strip()}")
+
+    
+"""
+ 
+
+def open_image_window():
+    imagename = filedialog.askopenfilename(
+        title="Select PNG file", 
+        filetypes=[("PNG Files", "*.png")]
+    )
+
+    if not imagename:
+        return  # Exit if no file is selected
+
+    # Create a new window
+    image_window = tk.Toplevel(root)
+    image_window.title("Search Book by Image + OCR")
+    image_window.geometry("600x600")
+    image_window.resizable(True, True)
+
+    tk.Label(image_window, text="Search Book by Image + OCR", font=("Arial", 12)).pack(pady=10)
+
+    # Initialize ImageDrawer
+    image_drawer = ImageDrawer(image_window, imagename)
+
+    # Function to get recognized text
+    def fetch_text():
+        recognized_text = image_drawer.return_recognized_text()
+        if recognized_text:
+            text_display.config(text=f"Recognized Text: {recognized_text}")
+        else:
+            text_display.config(text="No text recognized yet.")
+
+    # Button to fetch the recognized text
+    fetch_button = tk.Button(image_window, text="Get Recognized Text", command=fetch_text)
+    fetch_button.pack(pady=10)
+
+    # Label to display recognized text
+    text_display = tk.Label(image_window, text="Recognized Text: ", font=("Arial", 12))
+    text_display.pack(pady=10)
+"""
         
 
 def create_gui():
