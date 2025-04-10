@@ -10,7 +10,6 @@ class ImageDrawer:
         self.canvas = tk.Canvas(root, width=500, height=500)
         self.canvas.pack()
 
-        # Load the image
         self.image = Image.open(image_path)
         self.image_tk = ImageTk.PhotoImage(self.image)
         
@@ -78,10 +77,15 @@ class ImageDrawer:
 
     def recognize_text_in_rectangle(self, x1, y1, x2, y2):
         # Crop the image based on the selected area
+        x1, x2 = min(x1, x2), max(x1, x2)
+        y1, y2 = min(y1, y2), max(y1, y2)
+        
         cropped_image = self.image.crop((x1, y1, x2, y2))
 
         # Convert the cropped image to text using pyocr
         recognized_text = self.tool.image_to_string(cropped_image, lang='eng', builder=pyocr.builders.TextBuilder())
+
+        print("Recognized Text: {recognized_text.strip()}")
 
         # Display the recognized text in the label
         self.text_label.config(text=f"Recognized Text: {recognized_text.strip()}")
