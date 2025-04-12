@@ -8,26 +8,29 @@ class LibModel:
         self.load_library()
 
     def load_library(self):
-        if os.path.exists(self.json_file_path):
-            try:
-                with open(self.json_file_path, "r", encoding='utf-8') as file:
-                    content = file.read()
-                    if content.strip():
-                        self.books = json.loads(content)
-                        if not isinstance(self.books, list):
-                            print(f"Warning: JSON content in {self.json_file_path} is not a list. Initializing empty library.")
+        if not hasattr(self, '_library_loaded') or not self._library_loaded:
+            if os.path.exists(self.json_file_path):
+                try:
+                    with open(self.json_file_path, "r", encoding='utf-8') as file:
+                        content = file.read()
+                        if content.strip():
+                            self.books = json.loads(content)
+                            if not isinstance(self.books, list):
+                                print(f"Warning: JSON content in {self.json_file_path} is not a list. Initializing empty library.")
+                                self.books = []
+                        else:
                             self.books = []
-                    else:
-                        self.books = []
-            except json.JSONDecodeError:
-                print(f"Error: Could not decode JSON from {self.json_file_path}. Starting with empty library.")
+                except json.JSONDecodeError:
+                    print(f"Error: Could not decode JSON from {self.json_file_path}. Starting with empty library.")
+                    self.books = []
+                except Exception as e:
+                    print(f"An error occurred while loading {self.json_file_path}: {e}")
+                    self.books = []
+            else:
+                print(f"Info: {self.json_file_path} not found. Starting with empty library.")
                 self.books = []
-            except Exception as e:
-                print(f"An error occurred while loading {self.json_file_path}: {e}")
-                self.books = []
-        else:
-            print(f"Info: {self.json_file_path} not found. Starting with empty library.")
-            self.books = []
+            self._library_loaded = True
+
     def set_books(self, books):
         self.books = books
 
@@ -122,6 +125,7 @@ class LibModel:
 
             results.append(book)
         return results
+
     def sort_library_by_title(self):
         try:
             self.books.sort(key=lambda book: book.get('title', '').lower() if isinstance(book, dict) else '')

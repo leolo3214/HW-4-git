@@ -2,14 +2,20 @@
 # Handles the graphical user interface (GUI) using Tkinter.
 
 import tkinter as tk
-from tkinter import messagebox # For popups
+from tkinter import messagebox  # For popups
 from tkinter import ttk
+from PIL import Image, ImageTk
+from tkinter import filedialog
+from io import BytesIO
+import easyocr
+
 class LibView(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
         self.master = master
-        self.controller = None # Will be set by set_controller
-
+        self.controller = None  # Will be set by set_controller
+        self.image_canvas = None  # Canvas for displaying images
+        self.photo_image = None  # To store the PhotoImage reference
         self.create_widgets()
 
     def ask_status(self, title):
@@ -112,11 +118,19 @@ class LibView(tk.Frame):
         self.search_button = tk.Button(control_frame, text="Search")
         self.search_button.grid(row=0, column=3, padx=5, pady=5)
 
+        # Initialize the delete_button before using it
         self.delete_button = tk.Button(control_frame, text="Delete Selected")
         self.delete_button.grid(row=0, column=4, padx=5, pady=5)
 
+        self.upload_image_button = tk.Button(control_frame, text="Upload Image")
+        self.upload_image_button.grid(row=0, column=5, padx=5, pady=5)
+
         self.count_label = tk.Label(control_frame, text="Books: 0")
         self.count_label.grid(row=1, column=0, columnspan=2, padx=5, pady=5, sticky="w")
+
+        # Add a button to perform OCR on the rectangle
+        self.ocr_rectangle_button = tk.Button(control_frame, text="OCR Rectangle", command=self.perform_ocr_on_rectangle)
+        self.ocr_rectangle_button.grid(row=0, column=7, padx=5, pady=5)
 
         # Create list_frame for the book list.
         list_frame = tk.Frame(self.master)
@@ -160,6 +174,112 @@ class LibView(tk.Frame):
         self.sort_author_button.pack(side=tk.LEFT, padx=5)
         self.sort_status_button = tk.Button(sort_frame, text="Status")
         self.sort_status_button.pack(side=tk.LEFT, padx=5)
+
+        # Add a canvas for displaying images
+        self.image_canvas = tk.Canvas(self.master, width=500, height=500, bg="white")
+        self.image_canvas.grid(row=4, column=0, padx=10, pady=10, sticky="nsew")
+
+        # Update the Upload Image button to call the new method
+        self.upload_image_button.config(command=self.upload_image)
+
+        # Enable rectangle drawing on the canvas
+        self.enable_rectangle_drawing()
+
+    def upload_image(self):
+        # Open a file dialog to select an image
+        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.bmp;*.gif")])
+        if not file_path:
+            return  # User canceled the dialog
+
+        # Open the image using Pillow
+        try:
+            image = Image.open(file_path)
+            image = image.resize((500, 500), Image.Resampling.LANCZOS)  # Resize to fit the canvas
+            self.photo_image = ImageTk.PhotoImage(image)
+            self.uploaded_image = image  # Store the original image for OCR
+
+            # Display the image on the canvas
+            self.image_canvas.create_image(0, 0, anchor="nw", image=self.photo_image)
+        except Exception as e:
+            self.show_error("Error", f"Failed to load image: {e}")
+
+    def enable_rectangle_drawing(self):
+        # Bind mouse events to the canvas for rectangle drawing
+        self.image_canvas.bind("<ButtonPress-1>", self.start_rectangle)
+        self.image_canvas.bind("<B1-Motion>", self.update_rectangle)
+        self.image_canvas.bind("<ButtonRelease-1>", self.finish_rectangle)
+
+        self.rect_start_x = None
+        self.rect_start_y = None
+        self.current_rectangle = None
+
+    def start_rectangle(self, event):
+        # Record the starting point of the rectangle
+        self.rect_start_x = event.x
+        self.rect_start_y = event.y
+        self.current_rectangle = self.image_canvas.create_rectangle(
+            self.rect_start_x, self.rect_start_y, event.x, event.y, outline="red", width=2
+        )
+
+    def update_rectangle(self, event):
+        # Update the rectangle as the user drags the mouse
+        if self.current_rectangle:
+            self.image_canvas.coords(
+                self.current_rectangle, self.rect_start_x, self.rect_start_y, event.x, event.y
+            )
+
+    def finish_rectangle(self, event):
+        # Finalize the rectangle and store its coordinates
+        if self.current_rectangle:
+            coords = self.image_canvas.coords(self.current_rectangle)
+            print(f"Rectangle drawn with coordinates: {coords}")
+            # Optionally, pass these coordinates to the controller for further processing
+            # self.controller.process_rectangle(coords)
+
+    def perform_ocr_on_rectangle(self):
+        if self.photo_image is None:
+            self.show_error("Error", "No image uploaded to perform OCR.")
+            return
+
+        try:
+            # Debug: Log the rectangle coordinates
+            print(f"[DEBUG] Rectangle coordinates: {self.image_canvas.coords(self.current_rectangle)}")
+
+            # Get the coordinates of the rectangle
+            if not self.current_rectangle:
+                self.show_error("Error", "No rectangle drawn on the canvas.")
+                return
+
+            coords = self.image_canvas.coords(self.current_rectangle)
+            x1, y1, x2, y2 = map(int, coords)
+
+            # Map rectangle coordinates to the uploaded image's dimensions
+            canvas_width = self.image_canvas.winfo_width()
+            canvas_height = self.image_canvas.winfo_height()
+            image_width, image_height = self.photo_image.width(), self.photo_image.height()
+
+            # Scale the rectangle coordinates to match the image dimensions
+            scaled_x1 = int(x1 * (image_width / canvas_width))
+            scaled_y1 = int(y1 * (image_height / canvas_height))
+            scaled_x2 = int(x2 * (image_width / canvas_width))
+            scaled_y2 = int(y2 * (image_height / canvas_height))
+
+            # Crop the uploaded image using the scaled coordinates
+            cropped_image = self.uploaded_image.crop((scaled_x1, scaled_y1, scaled_x2, scaled_y2))
+
+            # Convert the cropped image to a NumPy array
+            import numpy as np
+            cropped_image_np = np.array(cropped_image)
+
+            # Perform OCR using EasyOCR
+            reader = easyocr.Reader(['en'])
+            results = reader.readtext(cropped_image_np)
+
+            # Display the OCR results
+            ocr_text = "\n".join([f"{text} (Confidence: {confidence:.2f})" for _, text, confidence in results])
+            self.show_info("OCR Results", ocr_text)
+        except Exception as e:
+            self.show_error("Error", f"Failed to perform OCR: {e}")
 
     def set_controller(self, controller):
         self.controller = controller
