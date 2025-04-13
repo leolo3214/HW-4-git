@@ -3,14 +3,11 @@
 # hryhorii.kuznetsov@stud.th-deg.de 
 # shamil.liman@stud.th-deg.de
 
-#idea: add_book takes a parameter that is always "" except when ocr is used then the recognized text is passed
-
 
 import tkinter as tk
 from tkinter import messagebox, ttk
 from tkinter import filedialog
 import controller
-#from controller import ImageDrawer
 import random
 import threading
 from tkinter import ttk
@@ -20,7 +17,6 @@ import string
 global root, title_entry, author_entry, year_entry, book_list, sort_order,library, library_name, book_count_label
 
 library_name = "lib_default.json"  # Default library name
-#book_list = None
 
 
 def load_library(library_name):
@@ -51,8 +47,9 @@ def open_add_book_window(title=None):
     year_entry = tk.Entry(add_window, width=30)
     year_entry.pack()
 
-    if title != None:
+    if title != None: # If a title is provided, pre-fill the title entry field. (only comes from image search)
         title_entry.insert(0, title)
+
 
     # Function to save the book
     def save_book():
@@ -81,34 +78,6 @@ def open_add_book_window(title=None):
     tk.Button(add_window, text="Save", command=save_book, width=10).pack(pady=10)
     tk.Button(add_window, text="Cancel", command=add_window.destroy, width=10).pack()
 
-
-
-
-def add_book():
-    # add info
-    
-    title = title_entry.get().strip()
-    author = author_entry.get().strip()
-    year = year_entry.get().strip()
-    
-
-    if not title or not author or not year:
-        messagebox.showerror("Error", "All fields must be filled!")
-        return
-
-    if not year.isdigit():
-        messagebox.showerror("Error", "Year must be a number!")
-        return
-    else:
-        year = int(year)
-
-    library.append({"title": title, "author": author, "year": year, "status": "available"})
-    controller.c_save_library(library_name, library)
-    refresh_list()
-
-    emptyfields()
-    
-    messagebox.showinfo("Success", "Book added!")
 
 
 def delete_book():
@@ -460,16 +429,14 @@ def open_image_window():
         title="PNG file",
         filetypes=[("PNG Files", "*.png")]
     )
-
-    image_window = tk.Toplevel(root)
-    image_window.title("search book by image and text recognition")
-    image_window.geometry("400x400")
-    image_window.resizable(True, True)
-    tk.Label(image_window, text="search book by image + OCR", font=("Arial", 12)).pack(pady=10)    
-
-    if imagename:  # Ensure an image is selected
+    if imagename: # Ensure an image is selected
+        image_window = tk.Toplevel(root)
+        image_window.title("search book by image and text recognition")
+        image_window.geometry("400x400")
+        image_window.resizable(True, True)
+        tk.Label(image_window, text="search book by image + OCR", font=("Arial", 12)).pack(pady=10)    
+ 
         image = controller.ImageDrawer(image_window, imagename, search_callback=search_book, confirm_callback=confirm_search_window)
-
 
         if image is None:
             messagebox.showerror("Error", "Failed to load the selected file.")
@@ -482,7 +449,6 @@ def confirm_search_window(recognized_text, on_confirm):
     confirm_window.geometry("400x150")
     confirm_window.resizable(False, False)
 
-    # Regular question label
     tk.Label(
         confirm_window,
         text="Do you want to search for a book with this name in your library?",
@@ -490,7 +456,6 @@ def confirm_search_window(recognized_text, on_confirm):
         font=("Arial", 12)
     ).pack(pady=(10, 0))
 
-    # Recognized text label (with bigger font)
     tk.Label(
         confirm_window,
         text=f"'{recognized_text}'",

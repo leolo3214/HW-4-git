@@ -4,12 +4,11 @@ from PIL import Image, ImageTk
 import pyocr
 import pyocr.builders
 import tkinter as tk
-#import gui
 
 
 class ImageDrawer:
     def __init__(self, root, image_path, search_callback=None, confirm_callback=None):
-        self.recognized_text = None  # Initialize recognized_text to None
+        self.recognized_text = None
         self.root = root
         self.image_path = image_path
         self.search_callback = search_callback
@@ -108,10 +107,6 @@ class ImageDrawer:
         
         if self.search_callback:
             self.search_callback(recognized_text)
-
-    
-    def return_recognized_text(self):
-        return self.recognized_text
 
 
 
