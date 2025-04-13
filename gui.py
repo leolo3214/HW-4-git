@@ -3,23 +3,24 @@
 # hryhorii.kuznetsov@stud.th-deg.de 
 # shamil.liman@stud.th-deg.de
 
+#idea: add_book takes a parameter that is always "" except when ocr is used then the recognized text is passed
 
 
 import tkinter as tk
 from tkinter import messagebox, ttk
 from tkinter import filedialog
 import controller
-from controller import ImageDrawer
+#from controller import ImageDrawer
 import random
 import threading
 from tkinter import ttk
 import string
 
 
-global library_name
+global root, title_entry, author_entry, year_entry, book_list, sort_order,library, library_name, book_count_label
 
 library_name = "lib_default.json"  # Default library name
-
+#book_list = None
 
 
 def load_library(library_name):
@@ -193,27 +194,44 @@ def sort_library(column):
     controller.c_save_library(library_name, library)  # Save sorted data
 
 
-def search_book():
-    query = title_entry.get().strip() or author_entry.get().strip() or year_entry.get().strip()
-    if not query:
-        messagebox.showerror("Error", "Please enter a title, author, or year to search!")
-        return
+def search_book(title=None):  # search books with queries
+    global library, book_list  # Declare book_list as global
+    print(title)
+    
+    library = load_library(library_name)
 
-    results = [
-        book for book in library
-        if (query.lower() in book["title"].lower()
-        or query.lower() in book["author"].lower()
-        or query.isdigit() and int(query) == book["year"])
-        and book["status"] in status_vars and status_vars[book["status"]].get()
-    ]
+    if not title:
+        query = title_entry.get().strip() or author_entry.get().strip() or year_entry.get().strip()
+        if not query:
+            messagebox.showerror("Error", "Please enter a title, author, or year to search!")
+            return
+
+        results = [
+            book for book in library
+            if (query.lower() in book["title"].lower()
+            or query.lower() in book["author"].lower()
+            or query.isdigit() and int(query) == book["year"])
+            and book["status"] in status_vars and status_vars[book["status"]].get()
+        ]
+    
+    else:
+        results = [
+            book for book in library
+            if (title.lower() in book["title"].lower())
+        ]
 
     if not results:
-        messagebox.showinfo("No Results", "No books found matching your search.")
-        return
+        if not title:
+            messagebox.showinfo("No Results", "No books found matching your search.")
+            return
+        else:
+            messagebox.showinfo("No Results", "No books found matching your search." + "\nDo you want to create a book with this title?:\n" + title)
+            return
 
     book_list.delete(*book_list.get_children())
     for book in results:
-        book_list.insert("", tk.END, values = (book["title"], book["author"], book["year"], book["status"]))
+        book_list.insert("", tk.END, values=(book["title"], book["author"], book["year"], book["status"]))
+
 
 def show_all_books():
     book_list.delete(*book_list.get_children())
@@ -236,7 +254,7 @@ def openfile():
 
     if filename:  # Ensure a file is selected
         library_name = filename  # Update the global file name
-        library = controller.load_library(library_name)  # Load new library
+        library = controller.load_library(library_name)  # Load new library##################################
 
         if library is None:
             messagebox.showerror("Error", "Failed to load the selected file.")
@@ -421,75 +439,56 @@ def update_book_count():
 
 
 def open_image_window():
-    #app = ImageDrawer(root, image_path)
-
     imagename = filedialog.askopenfilename(
         title="PNG file",
         filetypes=[("PNG Files", "*.png")]
     )
 
     image_window = tk.Toplevel(root)
-    image_window.title("search book by image + OCR")
+    image_window.title("search book by image and text recognition")
     image_window.geometry("400x400")
     image_window.resizable(True, True)
-    tk.Label(image_window, text="search book by image + OCR", font=("Arial", 12)).pack(pady=10)
-    #tk.Button(image_window, text="Get Recognized Text", command=lambda: image.return_recognized_text(), width=20).pack(pady=10)
-    
+    tk.Label(image_window, text="search book by image + OCR", font=("Arial", 12)).pack(pady=10)    
 
     if imagename:  # Ensure an image is selected
-        image = controller.ImageDrawer(image_window, imagename)  # Load image
+        image = controller.ImageDrawer(image_window, imagename, search_callback=search_book, confirm_callback=confirm_search_window)
+
 
         if image is None:
             messagebox.showerror("Error", "Failed to load the selected file.")
             return
-        #print(image.return_recognized_text())
-        #recognized_text = image.return_recognized_text()
-    #random_window.text_label.config(text=f"Recognized Text: {recognized_text.strip()}")
+       
 
-    
-"""
- 
+def confirm_search_window(recognized_text, on_confirm):
+    confirm_window = tk.Toplevel(root)
+    confirm_window.title("Confirm Text")
+    confirm_window.geometry("400x150")
+    confirm_window.resizable(False, False)
 
-def open_image_window():
-    imagename = filedialog.askopenfilename(
-        title="Select PNG file", 
-        filetypes=[("PNG Files", "*.png")]
-    )
+    # Regular question label
+    tk.Label(
+        confirm_window,
+        text="Do you want to search for a book with this name in your library?",
+        fg="red",
+        font=("Arial", 12)
+    ).pack(pady=(10, 0))
 
-    if not imagename:
-        return  # Exit if no file is selected
+    # Recognized text label (with bigger font)
+    tk.Label(
+        confirm_window,
+        text=f"'{recognized_text}'",
+        fg="red",
+        font=("Arial", 16, "bold")
+    ).pack(pady=(0, 10))
 
-    # Create a new window
-    image_window = tk.Toplevel(root)
-    image_window.title("Search Book by Image + OCR")
-    image_window.geometry("600x600")
-    image_window.resizable(True, True)
 
-    tk.Label(image_window, text="Search Book by Image + OCR", font=("Arial", 12)).pack(pady=10)
+    tk.Button(confirm_window, text="Yes", command=lambda: (on_confirm(recognized_text, confirm_window))).pack(side=tk.LEFT, padx=20)
+    tk.Button(confirm_window, text="No, select new text", command=confirm_window.destroy).pack(side=tk.RIGHT, padx=20)
 
-    # Initialize ImageDrawer
-    image_drawer = ImageDrawer(image_window, imagename)
 
-    # Function to get recognized text
-    def fetch_text():
-        recognized_text = image_drawer.return_recognized_text()
-        if recognized_text:
-            text_display.config(text=f"Recognized Text: {recognized_text}")
-        else:
-            text_display.config(text="No text recognized yet.")
-
-    # Button to fetch the recognized text
-    fetch_button = tk.Button(image_window, text="Get Recognized Text", command=fetch_text)
-    fetch_button.pack(pady=10)
-
-    # Label to display recognized text
-    text_display = tk.Label(image_window, text="Recognized Text: ", font=("Arial", 12))
-    text_display.pack(pady=10)
-"""
-        
 
 def create_gui():
-    global root, title_entry, author_entry, year_entry, book_list, sort_order,library, library_name, book_count_label
+    global root, title_entry, author_entry, year_entry, book_list, sort_order,library, library_name, book_count_label, book_list
     root = tk.Tk()
     root.title("Library Manager")
     root.geometry("850x600")
