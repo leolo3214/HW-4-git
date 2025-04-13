@@ -31,7 +31,7 @@ def load_library(library_name):
     return controller.load_library(library_name)
 
 
-def open_add_book_window():
+def open_add_book_window(title=None):
     #Opens a new window to add a book with Title, Author, and Year input fields.
     add_window = tk.Toplevel()
     add_window.title("Add New Book")
@@ -51,6 +51,9 @@ def open_add_book_window():
     year_entry = tk.Entry(add_window, width=30)
     year_entry.pack()
 
+    if title != None:
+        title_entry.insert(0, title)
+
     # Function to save the book
     def save_book():
         title = title_entry.get().strip()
@@ -64,6 +67,8 @@ def open_add_book_window():
         if not year.isdigit():
             messagebox.showerror("Error", "Year must be a number!")
             return
+        
+        messagebox.showinfo("Success", "Book added!")
 
         # Add book to library
         new_book = {"title": title, "author": author, "year": int(year), "status": "Available"}
@@ -215,6 +220,7 @@ def search_book(title=None):  # search books with queries
         ]
     
     else:
+        image_window.destroy()
         results = [
             book for book in library
             if (title.lower() in book["title"].lower())
@@ -225,7 +231,17 @@ def search_book(title=None):  # search books with queries
             messagebox.showinfo("No Results", "No books found matching your search.")
             return
         else:
-            messagebox.showinfo("No Results", "No books found matching your search." + "\nDo you want to create a book with this title?:\n" + title)
+            #messagebox.showinfo("No Results", "No books found matching your search." + "\nDo you want to create a book with this title?:\n" + title)
+            newocr = tk.Toplevel()
+            newocr.title("not found")
+            newocr.geometry("300x150")
+            newocr.resizable(False, False)
+
+            tk.Label(newocr, text="No books found matching your search.", fg="red").pack(pady=10)
+            tk.Label(newocr, text="Do you want to create a book with this title?:\n" + title, fg="black").pack(pady=10)
+
+            tk.Button(newocr, text="Yes", command=lambda: (open_add_book_window(title), newocr.destroy())).pack(side=tk.LEFT, padx=20)
+            tk.Button(newocr, text="No", command=newocr.destroy).pack(side=tk.RIGHT, padx=20)
             return
 
     book_list.delete(*book_list.get_children())
@@ -439,6 +455,7 @@ def update_book_count():
 
 
 def open_image_window():
+    global image_window
     imagename = filedialog.askopenfilename(
         title="PNG file",
         filetypes=[("PNG Files", "*.png")]
